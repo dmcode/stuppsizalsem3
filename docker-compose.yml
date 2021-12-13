@@ -1,0 +1,53 @@
+version: '2.3'
+services:
+
+  main_db:
+    image: mariadb:10.7.1
+    volumes:
+      - "main_dbdata:/var/lib/mysql"
+      - "./docker/initdb:/docker-entrypoint-initdb.d"
+    ports:
+      - "8306:3306"
+    restart: on-failure
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_DATABASE}
+      MYSQL_PASSWORD: ${MYSQL_DATABASE}
+
+  main_phpmyadmin:
+    image: phpmyadmin
+    restart: on-failure
+    ports:
+      - "8002:80"
+    environment:
+      - PMA_ARBITRARY=1
+    depends_on:
+      - main_db
+
+  main_php:
+    image: stuppsizalsem3_main_php:latest
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    volumes:
+      - "./docker/php/php.ini-development:/usr/local/etc/php/php.ini"
+      - ".:/srv/app/"
+    restart: on-failure
+    depends_on:
+      - main_db
+
+  main_httpd:
+    image: httpd:2.4-alpine
+    volumes:
+      - "./docker/httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf"
+      - ".:/srv/app/"
+    ports:
+      - "8000:80"
+    restart: on-failure
+    depends_on:
+      - main_php
+
+
+volumes:
+  main_dbdata:
